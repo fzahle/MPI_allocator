@@ -42,6 +42,7 @@ class Sleepers(Assembly):
         # can't seem to add sleeper.t to cases unless I make a passthrough...
         self.create_passthrough('sleeper.t')
         cases = dict(t=[random.randint(0,5) for r in xrange(10)])
+        self.total_time = sum(cases['t'])
         self.CaseIter.iterator = CaseArray(obj=cases)
         self.driver.workflow.add('CaseIter')
         # why doesn't this show up in the recorder's output?
@@ -51,6 +52,7 @@ class Sleepers(Assembly):
     def _post_run(self):
         for c in self.CaseIter.recorders[0].get_iterator():
             print c
+        print 'Total "CPU" time',self.total_time 
 
 
 class MPIallocatorTestCase(unittest.TestCase):
