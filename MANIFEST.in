@@ -1,0 +1,3 @@
+graft src/mpiallocator/sphinx_build/html
+recursive-include src/mpiallocator/test *.py
+

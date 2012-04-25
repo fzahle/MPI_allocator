@@ -1,0 +1,13 @@
+MANIFEST.in
+README.txt
+setup.cfg
+setup.py
+src/mpiallocator/__init__.py
+src/mpiallocator/mpiallocator.py
+src/mpiallocator.egg-info/PKG-INFO
+src/mpiallocator.egg-info/SOURCES.txt
+src/mpiallocator.egg-info/dependency_links.txt
+src/mpiallocator.egg-info/not-zip-safe
+src/mpiallocator.egg-info/requires.txt
+src/mpiallocator.egg-info/top_level.txt
+src/mpiallocator/test/test_mpiallocator.py
