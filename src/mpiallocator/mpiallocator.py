@@ -1,4 +1,4 @@
-__all__ = ['MPIResourceAllocationManager','MPIallocator','MPIjob']
+__all__ = ['MPI_allocator']
 
 import random
 import time
@@ -11,11 +11,9 @@ import traceback
 import commands
 import logging
 
-from openmdao.util.shellproc import ShellProc, STDOUT, DEV_NULL
 from openmdao.main.mp_support import OpenMDAO_Manager, register
 from openmdao.main.resource import FactoryAllocator, \
                                    HOME_DIRECTORY, WORKING_DIRECTORY
-from openmdao.main.objserverfactory import ObjServer 
 from openmdao.main.rbac import get_credentials, set_credentials, rbac
 
 
@@ -116,7 +114,6 @@ class MPI_Allocator(FactoryAllocator):
         """
 
         hostnames=[]
-       #print 'mpiallocator time_estimate',resource_desc
         if 'name' in resource_desc:
             if resource_desc['name'] != self.name:
                 return (-2,hostnames) 
@@ -235,44 +232,6 @@ class MPI_Allocator(FactoryAllocator):
         """ todo: shut down MPIallocator cluster """
         pass
 
-#   def time_estimate(self, resource_desc):
-
-#       retcode,hostnames = self.deploy(resource_desc)
-#       criteria = {
-#           'name': self.name,
-#           'hostnames':hostnames,
-#       }
-
-#       return retcode,criteria
-
-#class MPI_Server(ObjServer):
-##class MPI_Server(object):
-#    """
-#    Server that knows how to execute an MPI job with mpirun given a 
-#    resource description containing a list of hosts to execute the job on.   
-#    """
-#    def __init__(self,resource):
-#        super(MPI_Server, self).__init__(allow_shell=True)
-#        self.resource = resource
-#        self.pid = os.getpid()
-#        self.host = resource['hostnames']
-#        self._logger = logging.getLogger('MPI_Server')
-#
-#        # Set working directory now, for possible path fixing.
-#        try:
-#            value = resource['working_directory']
-#        except KeyError:
-#            pass
-#        else:
-#            self.work_dir = self._fix_path(value)
-#
-#    def _fix_path(self, path):
-#        """ Translates special prefixes. """
-#        if path.startswith(HOME_DIRECTORY):
-#            path = os.path.join(self.home_dir, path[len(HOME_DIRECTORY):])
-#        elif path.startswith(WORKING_DIRECTORY):
-#            path = os.path.join(self.work_dir, path[len(WORKING_DIRECTORY):])
-#        return path
 
 
 if __name__ == '__main__':
