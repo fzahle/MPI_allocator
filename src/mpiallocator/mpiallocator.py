@@ -1,13 +1,6 @@
 __all__ = ['MPI_allocator']
 
-import random
-import time
 import os
-import socket
-import sys
-import threading
-import time
-import traceback
 import commands
 import logging
 
