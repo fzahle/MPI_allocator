@@ -74,14 +74,11 @@ class MPI_Allocator(FactoryAllocator):
         resource_desc: dict
             Description of required resources.
         """
-        return (10000, {})
+
         retcode, info = self.check_compatibility(resource_desc)
         if retcode != 0:
             return (0, info)
         elif 'min_cpus' in resource_desc:
-            # get available cpu's from the allocator
-           #self.n_cpus = self._qstat()
-
             return (self.max_cpus / resource_desc['min_cpus'], {})
         else:
             return (self.max_cpus, {})
@@ -107,16 +104,21 @@ class MPI_Allocator(FactoryAllocator):
         """
 
         hostnames=[]
+        criteria = {
+            'hostnames':hostnames,
+        }
         if 'name' in resource_desc:
             if resource_desc['name'] != self.name:
-                return (-2,hostnames) 
-                
+                return (-2,criteria) 
         
         if 'min_cpus' in resource_desc:
-           n_cpus = resource_desc['min_cpus'] 
+            n_cpus = resource_desc['min_cpus'] 
+        else:
+            return (-2,criteria)
+
 
         if self._qstat() < n_cpus:
-            return (-1,hostnames)
+            return (-1,criteria)
 
         nh = 0
         for host in self.workers:
@@ -129,7 +131,7 @@ class MPI_Allocator(FactoryAllocator):
             'hostnames':hostnames,
         }
 
-        return (nh,criteria)
+        return (0,criteria)
 
     def check_compatibility(self, resource_desc):
         """
@@ -180,11 +182,16 @@ class MPI_Allocator(FactoryAllocator):
             The dictionary returned by :meth:`time_estimate`.
         """
 
-        print 'allocating hosts',criteria['hostnames']
+        hostnames = []
+        n_cpus=resource_desc['min_cpus']
+        nh = 0
         for i,worker in enumerate(self.workers):
-            for host in criteria['hostnames']:
-                if worker['hostname'] == host:
-                    worker['state'] = 0
+            if nh == n_cpus: break
+            if worker['state'] == 1:
+                worker['state'] = 0
+                hostnames.append(worker['hostname'])
+                nh+=1
+        print 'allocating hosts',hostnames
 
 
         credentials = get_credentials()
@@ -194,7 +201,7 @@ class MPI_Allocator(FactoryAllocator):
                                        name=name)
 
             # overwrite the server's host list with the assigned hosts
-            server.host = criteria['hostnames']
+            server.host = hostnames
             return server
 
         # Shouldn't happen...
@@ -211,7 +218,9 @@ class MPI_Allocator(FactoryAllocator):
             for host in server.host:
                 if host == worker['hostname']:
                     worker['state'] = 1
-            
+
+        self.factory.release(server)
+
     def _qstat(self):
         """check status of the workers and return number of free nodes"""
         free=0
@@ -221,9 +230,9 @@ class MPI_Allocator(FactoryAllocator):
         return free
              
 
-    def shutdown(self):
-        """ todo: shut down MPIallocator cluster """
-        pass
+   #def shutdown(self):
+   #    """ todo: shut down MPIallocator cluster """
+   #    pass
 
 
 

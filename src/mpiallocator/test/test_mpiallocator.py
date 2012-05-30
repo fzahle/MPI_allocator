@@ -7,13 +7,15 @@ from openmdao.main.api import Assembly,Component,set_as_top
 from openmdao.main.resource import ResourceAllocationManager as RAM
 from openmdao.lib.drivers.api import CaseIteratorDriver
 from openmdao.lib.casehandlers.api import CaseArray
-from openmdao.lib.datatypes.api import Float
-from openmdao.lib.casehandlers.api import DBCaseRecorder,ListCaseRecorder
+from openmdao.lib.datatypes.api import Float,Dict,List
+from openmdao.lib.casehandlers.api import DumpCaseRecorder,ListCaseRecorder
 from mpiallocator.mpiallocator import MPI_Allocator
 
 class Sleeper(Component):
     t = Float(0,iotype="in",units="s")
     tnew = Float(0,iotype="in",units="s")
+
+    resource = List(iotype="in")
 
     def __init__(self,*args,**kwargs):
         super(Sleeper, self).__init__()
@@ -21,10 +23,9 @@ class Sleeper(Component):
             if hasattr(self,k):
                 setattr(self,k,v)
 
-        super(Sleeper, self).__init__()
-
     def execute(self):
         time.sleep(self.t)
+        print 'dir',self.resource
         name = str(self.name)+str(self.t)+'.dat'
         f = open(name, 'w')
         f.write(str(self.t))
@@ -33,26 +34,36 @@ class Sleeper(Component):
 
 class Sleepers(Assembly):
 
+    
+    resource = List(iotype="in")
+
     def configure(self):
         self.add('CaseIter',CaseIteratorDriver())
         self.CaseIter.sequential = False
         self.CaseIter.extra_resources = {'min_cpus':4,'allocator':'test'} 
         self.add('sleeper',Sleeper())
         self.CaseIter.workflow.add('sleeper') 
-        # can't seem to add sleeper.t to cases unless I make a passthrough...
-        self.create_passthrough('sleeper.t')
-        cases = dict(t=[random.randint(0,5) for r in xrange(10)])
-        self.total_time = sum(cases['t'])
+        t=[random.randint(1,5) for r in xrange(10)]
+        cases={'sleeper.t':t}
+        
+        self.total_time = sum(cases['sleeper.t'])
         self.CaseIter.iterator = CaseArray(obj=cases)
         self.driver.workflow.add('CaseIter')
-        # why doesn't this show up in the recorder's output?
         self.CaseIter.case_outputs = ['sleeper.tnew']
-        self.CaseIter.recorders = [ListCaseRecorder()]
+        dumpoutfile = open('cases.out', 'w',0)
+        self.CaseIter.recorders = [DumpCaseRecorder(dumpoutfile),ListCaseRecorder()]
+
+        self.sleeper.resource = self.resource
+
+    def _pre_execute(self,force=True):
+        super(Sleepers, self)._pre_execute(force=force)
+        self.sleeper.resource = self.resource
+
 
     def _post_run(self):
-        for c in self.CaseIter.recorders[0].get_iterator():
+        for c in self.CaseIter.recorders[1].get_iterator():
             print c
-        print 'Total "CPU" time',self.total_time 
+        print 'Total "CPU" time',self.total_time,self._case_id 
 
 
 class MPIallocatorTestCase(unittest.TestCase):
