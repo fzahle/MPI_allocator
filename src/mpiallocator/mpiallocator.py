@@ -29,12 +29,13 @@ class MPI_Allocator(FactoryAllocator):
         self.accounting_id = accounting_id
         self.machines = machines
 
-        command = 'echo $PBS_VERSION'
-        PBS_VERSION=commands.getoutput(command)
+       #command = 'echo $PBS_VERSION'
+        command = 'echo $PBS_NODEFILE'
+        IS_PBS=commands.getoutput(command) != ''
 
         self.job_id = 0
 
-        if not 'TORQUE' in PBS_VERSION:
+        if not IS_PBS: 
             print 'Warning: This is not an mpi environment'
             # really only used for testing
             MPI_Allocator._MPI = False
