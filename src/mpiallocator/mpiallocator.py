@@ -7,6 +7,7 @@ import logging
 from openmdao.main.mp_support import OpenMDAO_Manager, register
 from openmdao.main.resource import FactoryAllocator, \
                                    HOME_DIRECTORY, WORKING_DIRECTORY
+from openmdao.main.objserverfactory import ObjServer
 from openmdao.main.rbac import get_credentials, set_credentials, rbac
 
 
@@ -21,6 +22,9 @@ class MPI_Allocator(FactoryAllocator):
     def __init__(self,name='MPI_Allocator',machines=None, accounting_id='no-default-set',
                  authkey=None, allow_shell=True):
         super(MPI_Allocator, self).__init__(name, authkey, allow_shell)
+
+        self.factory.manager_class = _ServerManager
+        self.factory.server_classname = 'mpiallocator_mpiallocator_MPI_Server'
 
         self.accounting_id = accounting_id
         self.machines = machines
@@ -201,7 +205,8 @@ class MPI_Allocator(FactoryAllocator):
                                        name=name)
 
             # overwrite the server's host list with the assigned hosts
-            server.host = hostnames
+            server.host = hostnames[0]
+            server.mpi_resources = hostnames
             return server
 
         # Shouldn't happen...
@@ -213,7 +218,7 @@ class MPI_Allocator(FactoryAllocator):
     def release(self,server):
         """
         """
-        print 'releasing hosts',server.host 
+        print 'releasing hosts',server.mpi_resources
         for worker in self.workers:
             for host in server.host:
                 if host == worker['hostname']:
@@ -236,5 +241,75 @@ class MPI_Allocator(FactoryAllocator):
 
 
 
-if __name__ == '__main__':
-    pass
+class MPI_Server(ObjServer):
+    """
+    Server that knows how to execute an MPI job with mpirun given a 
+    resource description containing a list of hosts to execute the job on.   
+    """
+
+    @rbac('owner')
+    def configure(self, accounting_id):
+        """
+        Configure default accounting id.
+
+        accounting_id: string
+            Used as default ``accounting_id`` value.
+        """
+
+        self.mpi_resources = None
+
+#   @rbac('owner')
+#   def execute_command(self,resource_desc)
+#       """
+#       Submit command based on `resource_desc`.
+
+#       resource_desc: dict
+#           Description of command and required resources.
+
+#       Necessary resource keys:
+#       ========================= ===========================
+#       Resource Key              Description
+#       ========================= ===========================
+#       remote_command            name of executable
+#       ------------------------- ---------------------------
+#       hostnames                 list of hosts
+#       ------------------------- ---------------------------
+
+#       The job will be submitted in the following manner:
+
+#       mpirun [-np X] [-host <hostnames>] <remote_command> 
+
+
+#       """
+
+#       env = None
+#       command=[]
+#       command.extend(self.mpi_path)
+
+#       # put together execute command from resource_desc
+#       # first the execute command, probably mpirun
+#       if 'hostnames' in resource_desc:
+#           np = len(resource_desc['hostnames'])
+#           if np > 0: 
+#               self.command.extend(('-np',str(np)))
+#               command.extend(('-host',str(resource_desc['hostnames'])))
+#           else:
+#               raise ValueError('%s: np must be > 0, got %d'
+#                                % (self.name, np))
+#       else:
+#           raise ValueError('"hostnames" key must be specified in resource_desc')
+
+#       if 'remote_command' in resource_desc:
+#           command.extend(resource_desc['remote_command'])
+
+#       try:
+#           process = ShellProc(command, DEV_NULL, 'qsub.out', STDOUT, env)
+
+
+class _ServerManager(OpenMDAO_Manager):
+    """  
+    A :class:`multiprocessing.Manager` which manages :class:`PBS_Server`.
+    """
+    pass 
+
+register(MPI_Server, _ServerManager, 'mpiallocator.mpiallocator')
